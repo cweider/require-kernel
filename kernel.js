@@ -189,6 +189,15 @@
     }
   }
 
+  function _compileFunction(code, filename) {
+    return new Function(code);
+  }
+
+  function compileFunction(code, filename) {
+    var compileFunction = rootRequire._compileFunction || _compileFunction;
+    return compileFunction.apply(this, arguments);
+  }
+
   /* Remote */
   function setRequestMaximum (value) {
     value == parseInt(value);
@@ -276,12 +285,12 @@
         define(path, null);
       } else {
         if (_globalKeyPath) {
-          var code = new Function(text);
-          code();
+          compileFunction(text, path)();
         } else {
-          var definition = new Function(
-              'return function (require, exports, module) {\n'
-                + text + '};\n')();
+          var definition = compileFunction(
+              'return (function (require, exports, module) {'
+            + text + '\n'
+            + '})', path)();
           define(path, definition);
         }
       }
@@ -634,6 +643,7 @@
   rootRequire._modules = modules;
   rootRequire._definitions = definitions;
   rootRequire._designatedRequire = _designatedRequire;
+  rootRequire._compileFunction = _compileFunction;
 
   /* Public interface */
   rootRequire.define = define;
