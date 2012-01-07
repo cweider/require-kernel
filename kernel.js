@@ -623,12 +623,17 @@
   }
 
   var rootRequire = requireRelativeTo('/');
+
+  /* Private internals */
   rootRequire._modules = modules;
   rootRequire._definitions = definitions;
+
+  /* Public interface */
   rootRequire.define = define;
   rootRequire.setRequestMaximum = setRequestMaximum;
   rootRequire.setGlobalKeyPath = setGlobalKeyPath;
   rootRequire.setRootURI = setRootURI;
   rootRequire.setLibraryURI = setLibraryURI;
+
   return rootRequire;
 }())
