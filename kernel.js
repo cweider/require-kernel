@@ -559,7 +559,7 @@
   }
 
   /* Require */
-  function requireBase(path, continuation) {
+  function _designatedRequire(path, continuation) {
     if (continuation === undefined) {
       var module = moduleAtPathSync(path);
       if (!module) {
@@ -577,10 +577,16 @@
     }
   }
 
+  function designatedRequire(path, continuation) {
+    var designatedRequire =
+        rootRequire._designatedRequire || _designatedRequire;
+    return designatedRequire.apply(this, arguments);
+  }
+
   function requireRelative(basePath, qualifiedPath, continuation) {
     qualifiedPath = qualifiedPath.toString();
     var path = normalizePath(fullyQualifyPath(qualifiedPath, basePath));
-    return requireBase(path, continuation);
+    return designatedRequire(path, continuation);
   }
 
   function requireRelativeN(basePath, qualifiedPaths, continuation) {
@@ -627,6 +633,7 @@
   /* Private internals */
   rootRequire._modules = modules;
   rootRequire._definitions = definitions;
+  rootRequire._designatedRequire = _designatedRequire;
 
   /* Public interface */
   rootRequire.define = define;
