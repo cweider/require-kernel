@@ -262,6 +262,13 @@ function requireForPaths(rootPath, libraryPath) {
   }
 
   mockRequire.emitter = MockXMLHttpRequest.emitter;
+
+  mockRequire._compileFunction = function (code, filename) {
+    return require('vm').runInThisContext('(function () {'
+      + code + '\n'
+      + '})', filename);
+  };
+
   return mockRequire;
 }
 
