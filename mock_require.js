@@ -272,4 +272,5 @@ function requireForPaths(rootPath, libraryPath) {
   return mockRequire;
 }
 
+exports.kernelSource = kernel;
 exports.requireForPaths = requireForPaths;
