@@ -223,8 +223,40 @@
     }
   }
 
+  var GLOBAL_EVAL_KEY = 'REQUIRE_KERNEL_EVAL';
+  function _bowserCompileFunction(code, filename) {
+    var global = (function () {return this})();
+    var old_val = global[GLOBAL_EVAL_KEY];
+
+    var head = document.head
+      || document.getElementsByTagName('head')[0]
+      || document.documentElement;
+
+    code = GLOBAL_EVAL_KEY + ' = function () {'+ code +'};'
+
+    var script = document.createElement('script');
+    script.type = "application/javascript";
+    if (document.all) {
+      script.text = code;
+    } else {
+      script.appendChild(document.createTextNode(code));
+    }
+
+    head.insertBefore(script, head.firstChild);
+
+    var result = global[GLOBAL_EVAL_KEY];
+    global[GLOBAL_EVAL_KEY] = old_val;
+    return result;
+  }
+
   function _compileFunction(code, filename) {
-    return new Function(code);
+    if ((typeof document !== 'undefined')
+        && document.readyState
+          && /^loaded|complete$/.test(document.readyState)) {
+      return _bowserCompileFunction(code, filename);
+    } else {
+      return new Function(code);
+    }
   }
 
   function compileFunction(code, filename) {
