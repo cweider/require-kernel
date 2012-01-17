@@ -27,7 +27,7 @@ var pathutil = require('path');
 var urlutil = require('url');
 var events = require('events');
 
-var kernelPath = pathutil.join(__dirname, '..', 'kernel.js');
+var kernelPath = pathutil.join(__dirname, 'kernel.js');
 var kernel = fs.readFileSync(kernelPath, 'utf8');
 
 var buildKernel = require('vm').runInThisContext(

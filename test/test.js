@@ -25,7 +25,7 @@
 var fs = require('fs');
 var util = require('util');
 var pathutil = require('path');
-var requireForPaths = require('./mock_require').requireForPaths;
+var requireForPaths = require('../mock_require').requireForPaths;
 
 var modulesPath = pathutil.join(__dirname, 'modules');
 
