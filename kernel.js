@@ -80,6 +80,7 @@
     try {
       deferredScheduled = true;
       f();
+      deferredScheduled = false;
       flushDefer();
     } finally {
       deferred.length && setTimeout(flushDefer, 0);
@@ -488,19 +489,14 @@
   function moduleAtPath(path, continuation) {
     var wrappedContinuation = function (error, module) {
       if (error) {
-        if (error instanceof CircularDependencyError) {
-          // Are the conditions for deadlock satisfied or not?
-          // TODO: This and define's satisfy should use a common deferral
-          // mechanism.
-          setTimeout(function () {moduleAtPath(path, continuation)}, 0);
-        } else {
-          continuation(null);
-        }
+        continuation(null);
       } else {
         continuation(module);
       }
     };
-    _moduleAtPath(path, fetchModule, wrappedContinuation);
+    defer(function () {
+      _moduleAtPath(path, fetchModule, wrappedContinuation);
+    });
   }
 
   function moduleAtPathSync(path) {
@@ -591,8 +587,10 @@
         throw new ArgumentError("Continuation must be a function.");
       }
 
-      moduleAtPath(path, function (module) {
-        continuation(module && module.exports);
+      flushDeferAfter(function () {
+        moduleAtPath(path, function (module) {
+          continuation(module && module.exports);
+        });
       });
     }
   }
