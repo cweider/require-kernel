@@ -419,14 +419,11 @@
     //  then replace with exports result.
     if (!moduleIsLoaded(path)) {
       if (hasOwnProperty(loadingModules, path)) {
-        var error =
-            new CircularDependencyError("Encountered circular dependency.")
-        continuation(error, undefined);
+        throw new CircularDependencyError("Encountered circular dependency.");
       } else if (!moduleIsDefined(path)) {
-        var error = new Error("Attempt to load undefined module.")
-        continuation(error, undefined);
+        throw new Error("Attempt to load undefined module.");
       } else if (definitions[path] === null) {
-        continuation(undefined, null);
+        continuation(null);
       } else {
         var definition = definitions[path];
         var _module = {id: path, exports: {}};
@@ -439,14 +436,14 @@
           definition(_require, _module.exports, _module);
           modules[path] = _module;
           delete loadingModules[path];
-          continuation(undefined, _module);
+          continuation(_module);
         } finally {
           delete loadingModules[path];
         }
       }
     } else {
       var module = modules[path];
-      continuation(undefined, module);
+      continuation(module);
     }
   }
 
@@ -461,13 +458,11 @@
       if (i < ii) {
         var path_ = path + suffixes[i];
         var after = function () {
-          loadModule(path_, function (error, module) {
-            if (error) {
-              continuation(error, module);
-            } else if (module === null) {
+          loadModule(path_, function (module) {
+            if (module === null) {
               _find(i + 1);
             } else {
-              continuation(undefined, module);
+              continuation(module);
             }
           });
         }
@@ -479,22 +474,15 @@
         }
 
       } else {
-        continuation(undefined, null);
+        continuation(null);
       }
     };
     _find(0);
   }
 
   function moduleAtPath(path, continuation) {
-    var wrappedContinuation = function (error, module) {
-      if (error) {
-        continuation(null);
-      } else {
-        continuation(module);
-      }
-    };
     defer(function () {
-      _moduleAtPath(path, fetchModule, wrappedContinuation);
+      _moduleAtPath(path, fetchModule, continuation);
     });
   }
 
@@ -503,12 +491,8 @@
     var oldSyncLock = syncLock;
     syncLock = true;
     try {
-      _moduleAtPath(path, fetchModuleSync, function (error, _module) {
-        if (error) {
-          throw error;
-        } else {
-          module = _module
-        }
+      _moduleAtPath(path, fetchModuleSync, function (_module) {
+        module = _module;
       });
     } finally {
       syncLock = oldSyncLock;
