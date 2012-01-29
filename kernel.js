@@ -17,6 +17,8 @@
   var fetchRequests = []; // Queue of pending requests.
   var currentRequests = 0; // Synchronization for parallel requests.
   var maximumRequests = 2; // The maximum number of parallel requests.
+  var deferred = []; // A list of callbacks that can be evaluated eventually.
+  var deferredScheduled = false; // If deferred functions will be executed.
 
   var syncLock = undefined;
   var globalKeyPath = undefined;
@@ -41,6 +43,47 @@
   function hasOwnProperty(object, key) {
     // Object-independent because an object may define `hasOwnProperty`.
     return Object.prototype.hasOwnProperty.call(object, key);
+  }
+
+  /* Deferral */
+  function defer(f_1, f_2, f_n) {
+    deferred.push.apply(deferred, arguments);
+  }
+
+  function _flushDefer() {
+    // Let exceptions happen, but don't allow them to break notification.
+    try {
+      while (deferred.length) {
+        var continuation = deferred.shift();
+        continuation();
+      }
+      deferredScheduled = false;
+    } finally {
+      deferred.length && setTimeout(_flushDefer, 0);
+    }
+  }
+
+  function flushDefer() {
+    if (!deferredScheduled && deferred.length > 0) {
+      if (syncLock) {
+        // Only asynchronous operations will wait on this condition so schedule
+        // and don't interfere with the synchronous operation in progress.
+        deferredScheduled = true;
+        setTimeout(_flushDefer, 0);
+      } else {
+        _flushDefer();
+      }
+    }
+  }
+
+  function flushDeferAfter(f) {
+    try {
+      deferredScheduled = true;
+      f();
+      flushDefer();
+    } finally {
+      deferred.length && setTimeout(flushDefer, 0);
+    }
   }
 
   // See RFC 2396 Appendix B
@@ -524,33 +567,15 @@
     }
 
     // With all modules installed satisfy those conditions for all waiters.
-    var continuations = [];
     for (var path in moduleMap) {
       if (hasOwnProperty(moduleMap, path)
         && hasOwnProperty(definitionWaiters, path)) {
-        continuations.push.apply(continuations, definitionWaiters[path]);
+        defer.apply(this, definitionWaiters[path]);
         delete definitionWaiters[path];
       }
     }
-    function satisfy() {
-      // Let exceptions happen, but don't allow them to break notification.
-      try {
-        while (continuations.length) {
-          var continuation = continuations.shift();
-          continuation();
-        }
-      } finally {
-        continuations.length && setTimeout(satisfy, 0);
-      }
-    }
 
-    if (syncLock) {
-      // Only asynchronous operations will wait on this condition so schedule
-      // and don't interfere with the synchronous operation in progress.
-      setTimeout(function () {satisfy(continuations)}, 0);
-    } else {
-      satisfy(continuations);
-    }
+    flushDefer();
   }
 
   /* Require */
