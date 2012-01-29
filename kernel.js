@@ -16,7 +16,7 @@
   var definitionWaiters = {}; // Locks for clearing duplicate requires.
   var fetchRequests = []; // Queue of pending requests.
   var currentRequests = 0; // Synchronization for parallel requests.
-  var maximumRequests = 2;
+  var maximumRequests = 2; // The maximum number of parallel requests.
 
   var syncLock = undefined;
   var globalKeyPath = undefined;
