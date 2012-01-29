@@ -386,7 +386,7 @@
       } else {
         var definition = definitions[path];
         var _module = {id: path, exports: {}};
-        var _require = requireRelativeTo(path.replace(/[^\/]+$/,''));
+        var _require = requireRelativeTo(path);
         if (!main) {
           main = _module;
         }
@@ -609,6 +609,7 @@
   }
 
   var requireRelativeTo = function (basePath) {
+    basePath = basePath.replace(/[^\/]+$/, '');
     function require(qualifiedPath, continuation) {
       if (arguments.length > 2) {
         var qualifiedPaths = Array.prototype.slice.call(arguments, 0, -1);
