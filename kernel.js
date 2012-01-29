@@ -440,9 +440,8 @@
           modules[path] = _module;
           delete loadingModules[path];
           continuation(undefined, _module);
-        } catch (error) {
+        } finally {
           delete loadingModules[path];
-          continuation(error, undefined);
         }
       }
     } else {
