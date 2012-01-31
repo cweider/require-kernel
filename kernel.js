@@ -108,6 +108,8 @@
       uri += location.scheme + ':';
     if (location.host)
       uri += "//" + location.host
+    if (location.host && location.path && location.path.charAt(0) != '/')
+      url += "/"
     if (location.path)
       uri += location.path
     if (location.query)
