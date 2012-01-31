@@ -123,7 +123,8 @@
       (typeof location == "undefined") ? {} : parseURI(location.toString());
     var uri = parseURI(uri);
 
-    return (uri.scheme === host_uri.scheme) && (uri.host === host_uri.host);
+    return (!uri.scheme && !uri.host)
+        || (uri.scheme === host_uri.scheme) && (uri.host === host_uri.host);
   }
 
   function mirroredURIForURI(uri) {
