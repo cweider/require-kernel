@@ -59,6 +59,7 @@
       }
       deferredScheduled = false;
     } finally {
+      deferredScheduled = deferred.length > 0;
       deferred.length && setTimeout(_flushDefer, 0);
     }
   }
@@ -83,6 +84,7 @@
       deferredScheduled = false;
       flushDefer();
     } finally {
+      deferredScheduled = false;
       deferred.length && setTimeout(flushDefer, 0);
     }
   }
