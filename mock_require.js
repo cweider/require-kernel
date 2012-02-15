@@ -28,7 +28,7 @@ var fs_client = (new function () {
   };
 
   function request(options, callback) {
-    var path = options.path;
+    var path = decodeURIComponent(options.path);
     var method = options.method;
 
     var response = new (require('events').EventEmitter);
@@ -204,7 +204,8 @@ var buildMockXMLHttpRequestClass = function () {
           requested(info);
           try {
             this.status = 200;
-            this.responseText = fs.readFileSync(parsedURL.path);
+            this.responseText = fs.readFileSync(
+                decodeURIComponent(parsedURL.path));
           } catch (e) {
             this.status = 404;
           }
