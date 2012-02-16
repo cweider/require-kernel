@@ -28,7 +28,7 @@ var fs_client = (new function () {
   };
 
   function request(options, callback) {
-    var path = decodeURIComponent(options.path);
+    var path = fsPathForURIPath(options.path);
     var method = options.method;
 
     var response = new (require('events').EventEmitter);
@@ -154,6 +154,15 @@ function requestURL(url, method, headers, callback) {
   }
 }
 
+function fsPathForURIPath(path) {
+  path = decodeURIComponent(path);
+  if (path.charAt(0) == '/') { // Account for '/C:\Windows' type of paths.
+    path = pathutil.resolve('/', path.slice(1));
+  }
+  path = pathutil.normalize(path);
+  return path;
+}
+
 function normalizePathAsURI(path) {
   var parsedUrl = urlutil.parse(path);
   if (parsedUrl.protocol === undefined) {
@@ -204,8 +213,8 @@ var buildMockXMLHttpRequestClass = function () {
           requested(info);
           try {
             this.status = 200;
-            this.responseText = fs.readFileSync(
-                decodeURIComponent(parsedURL.path));
+            var path = fsPathForURIPath(parsedURL.pathname);
+            this.responseText = fs.readFileSync(path);
           } catch (e) {
             this.status = 404;
           }
