@@ -47,6 +47,10 @@ assertEqual('/1.js', r('/1.js').value);
 assertEqual('/1.js', r('/1').value);
 assertEqual(r('/1.js'), r('/1'));
 
+/* Test encoding. */
+r = requireForPaths(modulesPath + '/root', modulesPath + '/library');
+assertEqual('/spa ce s.js', r('/spa ce s.js').value);
+
 /* Test questionable 'extra' relative paths. */
 r = requireForPaths(modulesPath + '/root', modulesPath + '/library');
 assertEqual('/../root/1.js', r('/../root/1').value);
