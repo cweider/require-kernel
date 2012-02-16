@@ -16,7 +16,9 @@
   var definitionWaiters = {}; // Locks for clearing duplicate requires.
   var fetchRequests = []; // Queue of pending requests.
   var currentRequests = 0; // Synchronization for parallel requests.
-  var maximumRequests = 2;
+  var maximumRequests = 2; // The maximum number of parallel requests.
+  var deferred = []; // A list of callbacks that can be evaluated eventually.
+  var deferredScheduled = false; // If deferred functions will be executed.
 
   var syncLock = undefined;
   var globalKeyPath = undefined;
@@ -43,6 +45,50 @@
     return Object.prototype.hasOwnProperty.call(object, key);
   }
 
+  /* Deferral */
+  function defer(f_1, f_2, f_n) {
+    deferred.push.apply(deferred, arguments);
+  }
+
+  function _flushDefer() {
+    // Let exceptions happen, but don't allow them to break notification.
+    try {
+      while (deferred.length) {
+        var continuation = deferred.shift();
+        continuation();
+      }
+      deferredScheduled = false;
+    } finally {
+      deferredScheduled = deferred.length > 0;
+      deferred.length && setTimeout(_flushDefer, 0);
+    }
+  }
+
+  function flushDefer() {
+    if (!deferredScheduled && deferred.length > 0) {
+      if (syncLock) {
+        // Only asynchronous operations will wait on this condition so schedule
+        // and don't interfere with the synchronous operation in progress.
+        deferredScheduled = true;
+        setTimeout(_flushDefer, 0);
+      } else {
+        _flushDefer();
+      }
+    }
+  }
+
+  function flushDeferAfter(f) {
+    try {
+      deferredScheduled = true;
+      f();
+      deferredScheduled = false;
+      flushDefer();
+    } finally {
+      deferredScheduled = false;
+      deferred.length && setTimeout(flushDefer, 0);
+    }
+  }
+
   // See RFC 2396 Appendix B
   var URI_EXPRESSION =
       /^(([^:\/?#]+):)?(\/\/([^\/?#]*))?([^?#]*)(\?([^#]*))?(#(.*))?/;
@@ -64,6 +110,8 @@
       uri += location.scheme + ':';
     if (location.host)
       uri += "//" + location.host
+    if (location.host && location.path && location.path.charAt(0) != '/')
+      url += "/"
     if (location.path)
       uri += location.path
     if (location.query)
@@ -79,7 +127,8 @@
       (typeof location == "undefined") ? {} : parseURI(location.toString());
     var uri = parseURI(uri);
 
-    return (uri.scheme === host_uri.scheme) && (uri.host === host_uri.host);
+    return (!uri.scheme && !uri.host)
+        || (uri.scheme === host_uri.scheme) && (uri.host === host_uri.host);
   }
 
   function mirroredURIForURI(uri) {
@@ -351,8 +400,9 @@
         checkScheduledfetchDefines();
       });
       if (globalKeyPath
-        && ((typeof document != undefined)
-          && document.readyState && document.readyState != 'loading')) {
+        && typeof document !== 'undefined'
+          && document.readyState
+            && /^loaded|complete$/.test(document.readyState)) {
         fetchDefineJSONP(fetchRequest);
       } else {
         fetchDefineXHR(fetchRequest, true);
@@ -374,18 +424,15 @@
     //  then replace with exports result.
     if (!moduleIsLoaded(path)) {
       if (hasOwnProperty(loadingModules, path)) {
-        var error =
-            new CircularDependencyError("Encountered circular dependency.")
-        continuation(error, undefined);
+        throw new CircularDependencyError("Encountered circular dependency.");
       } else if (!moduleIsDefined(path)) {
-        var error = new Error("Attempt to load undefined module.")
-        continuation(error, undefined);
+        throw new Error("Attempt to load undefined module.");
       } else if (definitions[path] === null) {
-        continuation(undefined, null);
+        continuation(null);
       } else {
         var definition = definitions[path];
         var _module = {id: path, exports: {}};
-        var _require = requireRelativeTo(path.replace(/[^\/]+$/,''));
+        var _require = requireRelativeTo(path);
         if (!main) {
           main = _module;
         }
@@ -394,15 +441,14 @@
           definition(_require, _module.exports, _module);
           modules[path] = _module;
           delete loadingModules[path];
-          continuation(undefined, _module);
-        } catch (error) {
+          continuation(_module);
+        } finally {
           delete loadingModules[path];
-          continuation(error, undefined);
         }
       }
     } else {
       var module = modules[path];
-      continuation(undefined, module);
+      continuation(module);
     }
   }
 
@@ -417,13 +463,11 @@
       if (i < ii) {
         var path_ = path + suffixes[i];
         var after = function () {
-          loadModule(path_, function (error, module) {
-            if (error) {
-              continuation(error, module);
-            } else if (module === null) {
+          loadModule(path_, function (module) {
+            if (module === null) {
               _find(i + 1);
             } else {
-              continuation(undefined, module);
+              continuation(module);
             }
           });
         }
@@ -435,28 +479,16 @@
         }
 
       } else {
-        continuation(undefined, null);
+        continuation(null);
       }
     };
     _find(0);
   }
 
   function moduleAtPath(path, continuation) {
-    var wrappedContinuation = function (error, module) {
-      if (error) {
-        if (error instanceof CircularDependencyError) {
-          // Are the conditions for deadlock satisfied or not?
-          // TODO: This and define's satisfy should use a common deferral
-          // mechanism.
-          setTimeout(function () {moduleAtPath(path, continuation)}, 0);
-        } else {
-          continuation(null);
-        }
-      } else {
-        continuation(module);
-      }
-    };
-    _moduleAtPath(path, fetchModule, wrappedContinuation);
+    defer(function () {
+      _moduleAtPath(path, fetchModule, continuation);
+    });
   }
 
   function moduleAtPathSync(path) {
@@ -464,12 +496,8 @@
     var oldSyncLock = syncLock;
     syncLock = true;
     try {
-      _moduleAtPath(path, fetchModuleSync, function (error, _module) {
-        if (error) {
-          throw error;
-        } else {
-          module = _module
-        }
+      _moduleAtPath(path, fetchModuleSync, function (_module) {
+        module = _module;
       });
     } finally {
       syncLock = oldSyncLock;
@@ -523,33 +551,15 @@
     }
 
     // With all modules installed satisfy those conditions for all waiters.
-    var continuations = [];
     for (var path in moduleMap) {
       if (hasOwnProperty(moduleMap, path)
         && hasOwnProperty(definitionWaiters, path)) {
-        continuations.push.apply(continuations, definitionWaiters[path]);
+        defer.apply(this, definitionWaiters[path]);
         delete definitionWaiters[path];
       }
     }
-    function satisfy() {
-      // Let exceptions happen, but don't allow them to break notification.
-      try {
-        while (continuations.length) {
-          var continuation = continuations.shift();
-          continuation();
-        }
-      } finally {
-        continuations.length && setTimeout(satisfy, 0);
-      }
-    }
 
-    if (syncLock) {
-      // Only asynchronous operations will wait on this condition so schedule
-      // and don't interfere with the synchronous operation in progress.
-      setTimeout(function () {satisfy(continuations)}, 0);
-    } else {
-      satisfy(continuations);
-    }
+    flushDefer();
   }
 
   /* Require */
@@ -565,8 +575,10 @@
         throw new ArgumentError("Continuation must be a function.");
       }
 
-      moduleAtPath(path, function (module) {
-        continuation(module && module.exports);
+      flushDeferAfter(function () {
+        moduleAtPath(path, function (module) {
+          continuation(module && module.exports);
+        });
       });
     }
   }
@@ -608,6 +620,7 @@
   }
 
   var requireRelativeTo = function (basePath) {
+    basePath = basePath.replace(/[^\/]+$/, '');
     function require(qualifiedPath, continuation) {
       if (arguments.length > 2) {
         var qualifiedPaths = Array.prototype.slice.call(arguments, 0, -1);

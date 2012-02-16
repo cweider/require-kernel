@@ -17,7 +17,7 @@ The kernel has the following methods:
 
 * `define`: A method for defining modules. It may be invoked one of several ways. In either case the path is expected to be fully qualified and the module a function with the signature `(require, exports, module)`.
   * `require.define(path, module)`
-  * `require.define({path1: module1, path2: module2, path3: module3})`
+  * `require.define({path1: module1[, path2: module2[, ...]]})`
 * `setGlobalKeyPath`: A string (such as `"require"` and `"namespace.req"`) that evaluates to the kernel in the global scope. Asynchronous retrieval of modules using JSONP will happen if and only if this path is defined. Default is `undefined`.
 * `setRootURI`: The URI that non-library paths will be requested relative to. Default is `undefined`.
 * `setLibraryURI`: The URI that library paths (i.e. paths that do not match `/^\.{0,2}\//`) will be requested relative to. Default is `undefined`.
