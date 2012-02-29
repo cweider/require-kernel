@@ -512,7 +512,7 @@
 
   function defineModule(path, module) {
     if (typeof path != 'string'
-      || !((module instanceof Function) || module === null)) {
+      || !((typeof module == 'function') || module === null)) {
       throw new ArgumentError(
           "Definition must be a (string, function) pair.");
     }
@@ -571,7 +571,7 @@
       }
       return module.exports;
     } else {
-      if (!(continuation instanceof Function)) {
+      if (!(typeof continuation == 'function')) {
         throw new ArgumentError("Continuation must be a function.");
       }
 
@@ -596,7 +596,7 @@
   }
 
   function requireRelativeN(basePath, qualifiedPaths, continuation) {
-    if (!(continuation instanceof Function)) {
+    if (!(typeof continuation == 'function')) {
       throw new ArgumentError("Final argument must be a continuation.");
     } else {
       // Copy and validate parameters
