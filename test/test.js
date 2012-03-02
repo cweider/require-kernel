@@ -56,6 +56,15 @@ r = requireForPaths(modulesPath + '/root', modulesPath + '/library');
 assertEqual('/../root/1.js', r('/../root/1').value);
 assertEqual('/../library/1.js', r('../library/1').value);
 
+/* Test relative paths in library modules */
+r = requireForPaths('/dev/null', '/dev/null');
+r.define("main.js", function (require, exports, module) {
+  exports.sibling = require('./sibling');
+});
+r.define("sibling.js", function (require, exports, module) {
+});
+assertEqual(r('main.js').sibling, r('sibling.js'));
+
 /* Test index resolution. */
 r = requireForPaths(modulesPath + '/index');
 assertEqual('/index.js', r('/').value);

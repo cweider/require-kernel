@@ -150,14 +150,13 @@
       component = pathComponents1[i];
       switch (component) {
         case '':
-          if (i == ii - 1) {
+          if (i == 0 || i == ii - 1) {
+            // This indicates a leading or trailing slash.
             pathComponents2.push(component);
-            break;
           }
+          break;
         case '.':
-          if (i == 0) {
-            pathComponents2.push(component);
-          }
+          // Always skip.
           break;
         case '..':
           if (pathComponents2.length > 1
@@ -181,7 +180,7 @@
       && (path.charAt(1) == '/'
         || (path.charAt(1) == '.' && path.charAt(2) == '/'))) {
       if (!basePath) {
-        basePath = '/';
+        basePath = '';
       } else if (basePath.charAt(basePath.length-1) != '/') {
         basePath += '/';
       }
