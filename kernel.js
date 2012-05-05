@@ -28,16 +28,16 @@
 
   var JSONP_TIMEOUT = 60 * 1000;
 
-  function CircularDependencyError(message) {
+  function CircularDependencyError() {
     this.name = "CircularDependencyError";
-    this.message = message;
+    Error.apply(this, arguments);
   };
-  CircularDependencyError.prototype = Error.prototype;
-  function ArgumentError(message) {
+  CircularDependencyError.prototype = new Error();
+  function ArgumentError() {
     this.name = "ArgumentError";
-    this.message = message;
+    Error.apply(this, arguments);
   };
-  ArgumentError.prototype = Error.prototype;
+  ArgumentError.prototype = new Error();
 
   /* Utility */
   function hasOwnProperty(object, key) {
