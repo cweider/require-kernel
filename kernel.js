@@ -78,13 +78,14 @@
   }
 
   function flushDeferAfter(f) {
+    var _deferredScheduled = deferredScheduled;
     try {
       deferredScheduled = true;
       f();
-      deferredScheduled = false;
+      deferredScheduled = _deferredScheduled;
       flushDefer();
     } finally {
-      deferredScheduled = false;
+      deferredScheduled = _deferredScheduled;
       deferred.length && setTimeout(flushDefer, 0);
     }
   }
