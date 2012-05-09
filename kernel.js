@@ -83,9 +83,13 @@
       deferredScheduled = true;
       f();
       deferredScheduled = _deferredScheduled;
+      _deferredScheduled = undefined; // contortion to avoid `catch`
       flushDefer();
     } finally {
-      deferredScheduled = _deferredScheduled;
+      if (deferredScheduled !== undefined) {
+        // Reset is needed (raised *before* it could happen in `try`).
+        deferredScheduled = _deferredScheduled;
+      }
       deferred.length && setTimeout(flushDefer, 0);
     }
   }
