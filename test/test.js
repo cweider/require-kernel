@@ -109,7 +109,7 @@ describe('require', function () {
   });
 
   it("should detect cycles", function () {
-    r = requireForPaths('/dev/null', '/dev/null');
+    var r = requireForPaths('/dev/null', '/dev/null');
     r.define({
       "one_cycle.js": function (require, exports, module) {
         exports.value = module.id;
@@ -151,7 +151,7 @@ describe('require', function () {
   });
 
   it("should avoid avoidable cycles", function () {
-    r = requireForPaths();
+    var r = requireForPaths();
     r.define({
       "non_cycle.js": function (require, exports, module) {
         exports.value = module.id;
