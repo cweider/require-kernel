@@ -108,6 +108,37 @@ describe('require', function () {
     assert.throws(function () {r('1', '1', '1')}, 'ArgumentError');
   });
 
+  it("should lookup nested libraries", function () {
+    var r = requireForPaths('/dev/null', '/dev/null');
+    r.setLibraryLookupComponent('node_modules');
+    r.define({
+      "thing0/index.js": function (require, exports, module) {
+        exports.value = module.id;
+      }
+    , "thing1/index.js": function (require, exports, module) {
+        exports.value = module.id;
+      }
+    , "/node_modules/thing1/index.js": function (require, exports, module) {
+        exports.value = module.id;
+      }
+    , "/node_modules/thing/node_modules/thing2/index.js": function (require, exports, module) {
+        exports.value = module.id;
+      }
+    , "/node_modules/thing/dir/node_modules/thing3/index.js": function (require, exports, module) {
+        exports.value = module.id;
+      }
+
+    , "/node_modules/thing/dir/load_things.js": function (require, exports, module) {
+        assert.equal(require('thing3').value, '/node_modules/thing/dir/node_modules/thing3/index.js');
+        assert.equal(require('thing2').value, '/node_modules/thing/node_modules/thing2/index.js');
+        assert.equal(require('thing1').value, '/node_modules/thing1/index.js');
+        assert.equal(require('thing0').value, 'thing0/index.js');
+      }
+    });
+
+    r('/node_modules/thing/dir/load_things.js');
+  });
+
   it("should detect cycles", function () {
     var r = requireForPaths('/dev/null', '/dev/null');
     r.define({
